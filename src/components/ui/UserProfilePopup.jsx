@@ -35,26 +35,21 @@ const UserProfilePopup = ({ user, position, onClose }) => {
   const isOnline     = onlineUsers.includes(user?.id);
   const isOwnProfile = currentUser?.id === user?.id;
 
-  // Own profile-д saved status харуулах
   const ownStatus  = profile?.status || "online";
   const statusCfg  = STATUS_COLORS[isOwnProfile ? ownStatus : (isOnline ? "online" : "offline")];
 
-  // Avatar url
   const avatarSrc  = user?.avatar
     ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
     : null;
 
-  // Gradient by username char
   const gradientIdx = (user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length;
   const avatarGrad  = AVATAR_GRADIENTS[gradientIdx];
 
-  // Animate in
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // Load friend/block status
   useEffect(() => {
     if (!user || isOwnProfile) return;
     api.get("/friends").then(res => {
@@ -70,7 +65,6 @@ const UserProfilePopup = ({ user, position, onClose }) => {
     }).catch(() => {});
   }, [user]);
 
-  // Click outside / Escape
   useEffect(() => {
     const clickOutside = e => {
       if (popupRef.current && !popupRef.current.contains(e.target)) onClose();
@@ -103,6 +97,7 @@ const UserProfilePopup = ({ user, position, onClose }) => {
   };
 
   const handleDM = () => { navigate(`/dm/${user.id}`); onClose(); };
+  const handleProfile = () => { navigate(`/profile/${user.id}`); onClose(); };
 
   const formatLastSeen = (dateStr) => {
     if (!dateStr) return "Offline";
@@ -115,9 +110,8 @@ const UserProfilePopup = ({ user, position, onClose }) => {
     return `${Math.floor(hrs / 24)}х өмнө`;
   };
 
-  // Smart positioning
   const POPUP_W = 230;
-  const POPUP_H = 260;
+  const POPUP_H = 300;
   const top  = Math.max(60, Math.min(position.y - 30, window.innerHeight - POPUP_H - 20));
   const left = Math.min(position.x + 16, window.innerWidth - POPUP_W - 16);
 
@@ -135,26 +129,20 @@ const UserProfilePopup = ({ user, position, onClose }) => {
         transform: visible ? "scale(1) translateY(0)" : "scale(0.95) translateY(6px)",
         transformOrigin: "top left",
       }}
-      className="rounded-2xl shadow-2xl overflow-hidden"
-      style2={{ background: "#1c1c1e", border: "1px solid rgba(255,255,255,0.1)" }}
     >
       <style>{`.aura-popup{background:#0D1035;border:1px solid #1B3066;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(8,11,42,0.8),0 0 0 1px rgba(27,48,102,0.4)}`}</style>
 
-      <div ref={popupRef} className="aura-popup" style={{ width: POPUP_W }}>
+      <div className="aura-popup" style={{ width: POPUP_W }}>
         {/* Cover banner */}
-        <div
-          className="relative"
-          style={{
-            height: 52,
-            background: "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
-            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)",
-            backgroundSize: "16px 16px",
-          }}
-        />
+        <div style={{
+          height: 52,
+          background: "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)",
+          backgroundSize: "16px 16px",
+        }} />
 
         {/* Avatar row */}
         <div className="px-3 pb-2 relative">
-          {/* Avatar floated up */}
           <div className="relative -mt-7 mb-2 inline-block">
             <div
               className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center"
@@ -171,9 +159,7 @@ const UserProfilePopup = ({ user, position, onClose }) => {
                   </span>
               }
             </div>
-            <span
-              className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0D1035] ${statusCfg.bg}`}
-            />
+            <span className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0D1035] ${statusCfg.bg}`} />
           </div>
 
           {/* Name + status */}
@@ -196,6 +182,17 @@ const UserProfilePopup = ({ user, position, onClose }) => {
           <div className="space-y-1.5 pb-1">
             {!isOwnProfile ? (
               <>
+                {/* View Profile */}
+                <button
+                  onClick={handleProfile}
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-white transition-all active:scale-[0.97]"
+                  style={{ background: "linear-gradient(135deg,#1B3066,#2a4080)" }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = ".88"}
+                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+                >
+                  👤 Профайл харах
+                </button>
+
                 {/* DM button */}
                 <button
                   onClick={handleDM}
@@ -240,12 +237,20 @@ const UserProfilePopup = ({ user, position, onClose }) => {
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => { window.dispatchEvent(new CustomEvent("open-profile")); onClose(); }}
-                className="w-full py-2 rounded-xl bg-[#111540] hover:bg-[#1B3066] border border-[#1B3066] text-gray-300 hover:text-white text-xs font-semibold transition-all active:scale-[0.97]"
-              >
-                ✏️ Профайл засах
-              </button>
+              <>
+                <button
+                  onClick={() => { navigate(`/profile/${currentUser.id}`); onClose(); }}
+                  className="w-full py-2 rounded-xl bg-[#111540] hover:bg-[#1B3066] border border-[#1B3066] text-gray-300 hover:text-white text-xs font-semibold transition-all active:scale-[0.97]"
+                >
+                  👤 Профайл харах
+                </button>
+                <button
+                  onClick={() => { window.dispatchEvent(new CustomEvent("open-profile")); onClose(); }}
+                  className="w-full py-2 rounded-xl bg-[#111540] hover:bg-[#1B3066] border border-[#1B3066] text-gray-300 hover:text-white text-xs font-semibold transition-all active:scale-[0.97]"
+                >
+                  ✏️ Профайл засах
+                </button>
+              </>
             )}
           </div>
         </div>
