@@ -23,7 +23,6 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import CallPage from "./pages/CallPage.jsx";
 import InvitePage from "./pages/InvitePage.jsx";
-import ProfilePage from "./pages/ProfilePage.jsx";
 
 const Spinner = () => (
   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100dvh", background: "#080B2A" }}>
