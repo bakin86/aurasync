@@ -51,6 +51,8 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     if (hrs < 24)  return `${hrs}ц өмнө`;
     return `${Math.floor(hrs / 24)}х өмнө`;
   };
+  const { profile } = useAuth();
+const bio = isOwnProfile ? profile?.bio : null;
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
@@ -188,7 +190,9 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
             </span>
           </div>
         </div>
-
+        {bio && (
+  <p style={{ fontSize: 12, color: "#b8bdd8", marginTop: 6, lineHeight: 1.6 }}>{bio}</p>
+)}
         {/* Account info card — ProfilePage-тэй адил */}
         <div style={{
           background: "#0c0f32",
