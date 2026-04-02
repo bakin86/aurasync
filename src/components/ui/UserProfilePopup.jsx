@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSocket } from "../../context/SocketContext.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
 import api from "../../api/axios.js";
 
 const AVATAR_GRADIENTS = [
@@ -15,14 +16,15 @@ const AVATAR_GRADIENTS = [
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace("/api", "");
 
 const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profile } = useAuth();
   const { onlineUsers } = useSocket();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const popupRef = useRef(null);
 
+  const isDark = theme === "dark";
   const isOwnProfile = currentUser?.id === initialUser?.id;
-  const { profile } = useAuth();
-  const bio = isOwnProfile ? profile?.bio : null;
+  const bio = isOwnProfile ? (profile?.bio || "") : "";
 
   const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
   const [friendStatus, setFriendStatus] = useState(null);
@@ -30,13 +32,26 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
 
-  const isOnline   = isOwnProfile ? true : onlineUsers.includes(user?.id);
+  const isOnline    = isOwnProfile ? true : onlineUsers.includes(user?.id);
   const statusColor = isOnline ? "#22c55e" : "#6b7280";
 
   const avatarSrc  = user?.avatar
     ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
     : null;
   const avatarGrad = AVATAR_GRADIENTS[(user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
+
+  // Theme colors — ProfilePage-тэй адил
+  const P = {
+    bg:      isDark ? "#080b28"  : "#ffffff",
+    card:    isDark ? "#080b28"  : "#ffffff",
+    card2:   isDark ? "#0c0f32"  : "#f4f4fb",
+    border:  isDark ? "#151d4a"  : "#c8c8dc",
+    border2: isDark ? "#1e2d6a"  : "#b0b0cc",
+    text:    isDark ? "#F0F0F5"  : "#04061a",
+    text2:   isDark ? "#b8bdd8"  : "#151d4a",
+    muted:   isDark ? "#6B7399"  : "#6B7399",
+    shadow:  isDark ? "0 32px 80px rgba(8,11,42,.8), 0 0 0 1px rgba(27,48,102,.4)" : "0 8px 48px rgba(8,11,42,.15)",
+  };
 
   const formatDate = (d) => {
     if (!d) return "—";
@@ -91,26 +106,23 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   };
 
   const POPUP_W = 320;
-  const POPUP_H = isOwnProfile ? 280 : 380;
+  const POPUP_H = isOwnProfile ? 300 : 400;
   const top  = Math.max(60, Math.min((position?.y || 200) - 30, window.innerHeight - POPUP_H - 20));
   const left = Math.min((position?.x || 200) + 16, window.innerWidth - POPUP_W - 16);
 
   return (
-    <div
-      ref={popupRef}
-      style={{
-        position: "fixed", zIndex: 500, top, left, width: POPUP_W,
-        opacity: visible ? 1 : 0,
-        transform: visible ? "scale(1) translateY(0)" : "scale(0.94) translateY(8px)",
-        transition: "opacity .18s ease, transform .18s cubic-bezier(0.22,1,0.36,1)",
-        borderRadius: 24,
-        overflow: "hidden",
-        boxShadow: "0 32px 80px rgba(4,6,26,.95), 0 0 0 1px rgba(27,48,102,.3)",
-        background: "#080b28",
-        border: "1px solid #151d4a",
-      }}
-    >
-      {/* Cover banner — ProfilePage-тэй адил */}
+    <div ref={popupRef} style={{
+      position: "fixed", zIndex: 500, top, left, width: POPUP_W,
+      opacity: visible ? 1 : 0,
+      transform: visible ? "scale(1) translateY(0)" : "scale(0.94) translateY(8px)",
+      transition: "opacity .18s ease, transform .18s cubic-bezier(0.22,1,0.36,1)",
+      borderRadius: 24, overflow: "hidden",
+      boxShadow: P.shadow,
+      background: P.card,
+      border: `1px solid ${P.border}`,
+    }}>
+
+      {/* Cover banner */}
       <div style={{
         height: 90,
         background: "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
@@ -118,7 +130,7 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
         backgroundSize: "18px 18px",
         position: "relative",
       }}>
-        {/* Close button */}
+        {/* Close */}
         <button onClick={onClose} style={{
           position: "absolute", top: 10, right: 10,
           width: 28, height: 28, borderRadius: "50%",
@@ -127,40 +139,17 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>✕</button>
 
-        {/* Avatar — ProfilePage-тэй адил байрлал */}
-        <div style={{ position: "absolute", left: 18, bottom: -32 }}>
-          <div style={{ position: "relative" }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: "50%",
-              border: "4px solid #080b28",
-              background: avatarSrc ? "transparent" : avatarGrad,
-              overflow: "hidden",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: `0 0 0 2px #151d4a`,
-            }}>
-              {avatarSrc
-                ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <span style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{user?.username?.[0]?.toUpperCase()}</span>
-              }
-            </div>
-            {/* Status dot */}
-            <span style={{
-              position: "absolute", bottom: 4, right: 2,
-              width: 14, height: 14, borderRadius: "50%",
-              background: statusColor, border: "3px solid #080b28",
-            }} />
-          </div>
-        </div>
-
-        {/* Edit button — own profile */}
+        {/* Засах товч — өөрийн профайл */}
         {isOwnProfile && (
           <button
             onClick={() => { window.dispatchEvent(new CustomEvent("open-profile")); onClose(); }}
             style={{
               position: "absolute", bottom: 10, right: 14,
               padding: "6px 14px", borderRadius: 20,
-              background: "#fff", border: "none",
-              color: "#080b28", fontSize: 12, fontWeight: 700,
+              background: isDark ? "#F0F0F5" : "#04061a",
+              border: "none",
+              color: isDark ? "#04061a" : "#F0F0F5",
+              fontSize: 12, fontWeight: 700,
               cursor: "pointer", display: "flex", alignItems: "center", gap: 5,
               boxShadow: "0 2px 12px rgba(0,0,0,.3)",
             }}
@@ -172,14 +161,39 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
             Засах
           </button>
         )}
+
+        {/* Avatar */}
+        <div style={{ position: "absolute", left: 18, bottom: -32 }}>
+          <div style={{ position: "relative" }}>
+            <div style={{
+              width: 72, height: 72, borderRadius: "50%",
+              border: `4px solid ${P.card}`,
+              background: avatarSrc ? "transparent" : avatarGrad,
+              overflow: "hidden",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: `0 0 0 2px ${P.border}`,
+            }}>
+              {avatarSrc
+                ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                : <span style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{user?.username?.[0]?.toUpperCase()}</span>
+              }
+            </div>
+            <span style={{
+              position: "absolute", bottom: 4, right: 2,
+              width: 14, height: 14, borderRadius: "50%",
+              background: statusColor, border: `3px solid ${P.card}`,
+            }} />
+          </div>
+        </div>
       </div>
 
       {/* Body */}
       <div style={{ padding: "44px 18px 18px" }}>
+
         {/* Name & status */}
         <div style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: "#F0F0F5" }}>{user?.username}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 17, fontWeight: 800, color: P.text }}>{user?.username}</span>
             <span style={{
               padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
               background: isOnline ? "rgba(34,197,94,.12)" : "rgba(107,114,128,.12)",
@@ -190,30 +204,30 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
             </span>
           </div>
           {bio && (
-            <p style={{ fontSize: 12, color: "#b8bdd8", marginTop: 4, lineHeight: 1.6, margin: "4px 0 0" }}>{bio}</p>
+            <p style={{ fontSize: 12, color: P.text2, marginTop: 4, lineHeight: 1.6 }}>{bio}</p>
           )}
         </div>
 
-        {/* Account info card — ProfilePage-тэй адил */}
+        {/* Account info card */}
         <div style={{
-          background: "#0c0f32",
-          border: "1px solid #151d4a",
+          background: P.card2,
+          border: `1px solid ${P.border}`,
           borderRadius: 14, padding: "12px 14px",
           marginBottom: 14,
         }}>
           <div style={{
             fontSize: 10, fontWeight: 700, letterSpacing: ".08em",
-            textTransform: "uppercase", color: "#6B7399", marginBottom: 10,
+            textTransform: "uppercase", color: P.muted, marginBottom: 10,
           }}>
             ДАНСНЫ МЭДЭЭЛЭЛ
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "#6B7399" }}>Бүртгүүлсэн</span>
-            <span style={{ fontSize: 13, color: "#b8bdd8", fontWeight: 600 }}>{formatDate(user?.createdAt)}</span>
+            <span style={{ fontSize: 13, color: P.muted }}>Бүртгүүлсэн</span>
+            <span style={{ fontSize: 13, color: P.text2, fontWeight: 600 }}>{formatDate(user?.createdAt)}</span>
           </div>
         </div>
 
-        {/* Actions — зөвхөн бусад хэрэглэгчид */}
+        {/* Actions */}
         {!isOwnProfile && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <button
@@ -240,24 +254,22 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
               </button>
             ) : (
               <button
-                onClick={handleAddFriend}
-                disabled={loading}
-                style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(27,48,102,.5)", border: "1px solid #1B3066", color: "#b8bdd8", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
+                onClick={handleAddFriend} disabled={loading}
+                style={{ width: "100%", padding: "10px", borderRadius: 12, background: isDark ? "rgba(27,48,102,.5)" : "rgba(27,48,102,.1)", border: `1px solid ${P.border2}`, color: P.text2, fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#1B3066"; e.currentTarget.style.color = "#fff"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "rgba(27,48,102,.5)"; e.currentTarget.style.color = "#b8bdd8"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(27,48,102,.5)" : "rgba(27,48,102,.1)"; e.currentTarget.style.color = P.text2; }}
               >
                 👥 Найз болох
               </button>
             )}
 
             <button
-              onClick={handleBlock}
-              disabled={loading}
+              onClick={handleBlock} disabled={loading}
               style={{
                 width: "100%", padding: "10px", borderRadius: 12,
                 background: isBlocked ? "rgba(239,68,68,.12)" : "transparent",
-                border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : "#151d4a"}`,
-                color: isBlocked ? "#f87171" : "#6B7399",
+                border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : P.border}`,
+                color: isBlocked ? "#f87171" : P.muted,
                 fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s",
               }}
             >
