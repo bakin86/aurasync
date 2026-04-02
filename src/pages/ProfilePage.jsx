@@ -20,51 +20,41 @@ export default function ProfilePage() {
   const { user: currentUser } = useAuth();
   const { onlineUsers } = useSocket();
 
-  const [user, setUser]               = useState(null);
-  const [loading, setLoading]         = useState(true);
-  const [friendStatus, setFriendStatus] = useState(null);
-  const [isBlocked, setIsBlocked]     = useState(false);
+  const [user, setUser]                   = useState(null);
+  const [loading, setLoading]             = useState(true);
+  const [friendStatus, setFriendStatus]   = useState(null);
+  const [isBlocked, setIsBlocked]         = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
   const isOwnProfile = currentUser?.id === id;
-  const isOnline = onlineUsers.includes(id);
+  const isOnline     = onlineUsers.includes(id);
 
   useEffect(() => {
-    setLoading(true);
-    api.get(`/auth/search?q=${id}`).catch(() => {})
-    // Fetch user by id
-    api.get(`/friends`).then(res => {
-      const friends = res.data.data || [];
-      const found = friends.find(f => f.id === id);
-      if (found) { setUser(found); setFriendStatus("friends"); }
-    }).catch(() => {});
-
-    // Try to get from search or current user
     if (isOwnProfile) {
       setUser(currentUser);
       setLoading(false);
       return;
     }
 
-    // Get friend/block status
+    setLoading(true);
+    api.get(`/auth/user/${id}`)
+      .then(res => setUser(res.data.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+
     api.get("/friends").then(res => {
       const friends = res.data.data || [];
-      const found = friends.find(f => f.id === id);
-      if (found) { setUser(found); setFriendStatus("friends"); }
+      if (friends.find(f => f.id === id)) setFriendStatus("friends");
     }).catch(() => {});
 
     api.get("/friends/requests").then(res => {
       const reqs = res.data.data || [];
-      if (reqs.find(r => r.senderId === currentUser?.id && r.receiverId === id)) {
-        setFriendStatus("pending");
-      }
+      if (reqs.find(r => r.senderId === currentUser?.id)) setFriendStatus("pending");
     }).catch(() => {});
 
     api.get(`/blocks/check/${id}`).then(res => {
       setIsBlocked(res.data.data.blocked);
     }).catch(() => {});
-
-    setLoading(false);
   }, [id]);
 
   const handleAddFriend = async () => {
@@ -91,12 +81,18 @@ export default function ProfilePage() {
     : null;
 
   const gradientIdx = (user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length;
-  const avatarGrad = AVATAR_GRADIENTS[gradientIdx];
+  const avatarGrad  = AVATAR_GRADIENTS[gradientIdx];
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     return new Date(dateStr).toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric" });
   };
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#04061a,#080b28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: "#6B7399", fontSize: 14 }}>Уншиж байна...</div>
+    </div>
+  );
 
   return (
     <div style={{
@@ -139,7 +135,7 @@ export default function ProfilePage() {
         {/* Content */}
         <div style={{ padding: "0 24px 24px" }}>
           {/* Avatar */}
-          <div style={{ marginTop: -40, marginBottom: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <div style={{ marginTop: -40, marginBottom: 16 }}>
             <div style={{
               width: 80, height: 80, borderRadius: "50%",
               border: "4px solid #0D1035",
@@ -155,7 +151,6 @@ export default function ProfilePage() {
                     {user?.username?.[0]?.toUpperCase() || "?"}
                   </span>
               }
-              {/* Status dot */}
               <span style={{
                 position: "absolute", bottom: 4, right: 4,
                 width: 14, height: 14, borderRadius: "50%",
@@ -190,8 +185,7 @@ export default function ProfilePage() {
                 <button
                   onClick={() => navigate(`/dm/${id}`)}
                   style={{
-                    width: "100%", padding: "12px",
-                    borderRadius: 14, border: "none",
+                    width: "100%", padding: "12px", borderRadius: 14, border: "none",
                     background: "linear-gradient(135deg,#a855f7,#6366f1)",
                     color: "#fff", fontSize: 14, fontWeight: 700,
                     cursor: "pointer", transition: "opacity .15s",
