@@ -1,0 +1,412 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@700;800;900&display=swap');
+
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ══════════════════════════════════════════
+   PALETTE  (from image)
+   #080B2A  deepest navy
+   #1B3066  mid navy
+   #6B7399  slate-blue muted
+   #F0F0F5  off-white
+   ══════════════════════════════════════════ */
+
+/* Dark mode (default) */
+:root {
+  --bg:       #04061a;
+  --surface:  #080b28;
+  --surface2: #0c0f32;
+  --surface3: #111840;
+  --border:   #151d4a;
+  --border2:  #1e2d6a;
+  --text:     #F0F0F5;
+  --text2:    #b8bdd8;
+  --text3:    #8890b5;
+  --text4:    #6B7399;
+  --text5:    #3d4670;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --accent:   #a855f7;
+  --accent2:  #6366f1;
+}
+
+/* Light mode */
+html.dark {
+  --bg:       #04061a;
+  --surface:  #080b28;
+  --surface2: #0c0f32;
+  --surface3: #111840;
+  --border:   #151d4a;
+  --border2:  #1e2d6a;
+  --text:     #F0F0F5;
+  --text2:    #b8bdd8;
+  --text3:    #8890b5;
+  --text4:    #6B7399;
+  --text5:    #3d4670;
+}
+
+html:not(.dark) {
+  --bg:       #F0F0F5;
+  --surface:  #ffffff;
+  --surface2: #e8e8f0;
+  --surface3: #d8d8e8;
+  --border:   #c8c8dc;
+  --border2:  #b0b0cc;
+  --text:     #080B2A;
+  --text2:    #1B3066;
+  --text3:    #3d4f80;
+  --text4:    #6B7399;
+  --text5:    #9099b8;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text5); }
+
+input::placeholder { color: var(--text5); }
+input:focus { outline: none; }
+button { font-family: 'Inter', sans-serif; }
+
+/* Custom cursor — login page */
+body.cursor-none, body.cursor-none * { cursor: none !important; }
+
+/* ══════════════════════════════════════════
+   ANIMATIONS — lightweight
+   ══════════════════════════════════════════ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.93) translateY(5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes spinSlow {
+  to { transform: rotate(360deg); }
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(168,85,247,0); }
+  50%       { box-shadow: 0 0 12px 3px rgba(168,85,247,0.25); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+@keyframes navyPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* Utility classes */
+.animate-fade-up     { animation: fadeUp .35s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-fade-in     { animation: fadeIn .25s ease both; }
+.animate-slide-down  { animation: slideDown .2s ease both; }
+.animate-slide-right { animation: slideInRight .25s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-pop-in      { animation: popIn .22s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-spin-slow   { animation: spinSlow 1.2s linear infinite; }
+.animate-pulse-glow  { animation: pulse-glow 2s ease infinite; }
+
+/* Stagger helpers */
+.delay-1 { animation-delay: .05s; }
+.delay-2 { animation-delay: .10s; }
+.delay-3 { animation-delay: .15s; }
+.delay-4 { animation-delay: .20s; }
+.delay-5 { animation-delay: .25s; }
+
+/* Profile popup */
+.profile-popup-enter { animation: popIn .18s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ── Component classes ── */
+.bg-dark-800 { background-color: #0D1035; }
+.bg-dark-700 { background-color: #111540; }
+.dark .dark\:bg-dark-800 { background-color: #0D1035; }
+.dark .dark\:bg-dark-700 { background-color: #111540; }
+
+.input-base {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.input-base::placeholder { color: var(--text5); }
+.input-base:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .1s, box-shadow .15s;
+}
+.btn-primary:hover {
+  background: #9333ea;
+  box-shadow: 0 4px 16px rgba(168,85,247,0.35);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: scale(0.98) translateY(0); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* Navy shimmer skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 6px;
+}
+
+/* Smooth hover lift for cards */
+.hover-lift {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(8,11,42,0.4);
+}
+
+/* Hover state utility */
+.hover-navy:hover { background: rgba(107,115,153,0.15) !important; }
+
+/* ── Custom cursor ─────────────────────────────── */
+*, *::before, *::after {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%234d8fff' fill-opacity='0.85'/%3E%3Ccircle cx='10' cy='10' r='2' fill='white'/%3E%3C/svg%3E") 10 10, auto !important;
+}
+
+button, a, [role="button"], select, input[type="submit"],
+input[type="button"], label[for], .cursor-pointer {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='5' fill='%234d8fff'/%3E%3Ccircle cx='10' cy='10' r='2.5' fill='white'/%3E%3C/svg%3E") 10 10, pointer !important;
+}
+
+input, textarea {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='20' viewBox='0 0 4 20'%3E%3Crect x='1.5' y='0' width='1' height='20' rx='0.5' fill='%234d8fff'/%3E%3C/svg%3E") 2 10, text !important;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE DESIGN — Mobile First
+   ══════════════════════════════════════════ */
+
+/* Mobile bottom nav — hidden by default, shown on mobile */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 8px;
+}
+
+/* Sidebar responsive */
+/* Drawer styles only activate on mobile */
+@media (max-width: 768px) {
+  .sidebar-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 4px 0 32px rgba(8,11,42,0.5);
+  }
+  .sidebar-drawer.open {
+    transform: translateX(0);
+  }
+}
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(8,11,42,0.6);
+  z-index: 199;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.open {
+  display: block;
+}
+
+/* Login responsive */
+.login-card-left {
+  display: flex;
+}
+
+/* Chat page — always full screen */
+.chat-page {
+  height: 100dvh;
+}
+
+/* Chat page responsive */
+
+@media (max-width: 768px) {
+  body { overflow: hidden; }
+
+  .mobile-nav { display: flex; }
+
+  /* Chat page takes full height minus bottom nav */
+  .chat-page {
+    height: calc(100dvh - 60px) !important;
+    max-height: calc(100dvh - 60px) !important;
+  }
+
+  /* Message input — normal flow, fits above bottom nav automatically */
+  .message-input-bar {
+    padding: 8px 12px 10px !important;
+  }
+
+  /* Login page — vertically centered, full screen */
+  .login-page-wrapper {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+
+  .login-card-left { display: none !important; }
+
+  .login-card {
+    flex-direction: column !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    min-height: 100dvh !important;
+    border: none !important;
+    box-shadow: none !important;
+    justify-content: center !important;
+  }
+
+  .login-form-panel {
+    width: 100% !important;
+    border-left: none !important;
+    border-top: none !important;
+    padding: 40px 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .login-form-panel > div {
+    width: 100% !important;
+    max-width: 360px !important;
+  }
+
+  .dashboard-header-actions { gap: 6px !important; }
+  .dashboard-header-actions button span { display: none; }
+
+  .chat-member-panel { display: none !important; }
+
+  /* Video panel: keep rendered (for fullscreen call), but collapse it */
+  .chat-video-panel {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Show call buttons in header on mobile */
+  .mobile-call-btns { display: flex !important; }
+
+  /* Hide desktop header buttons, show mobile ones */
+  .header-btn-desktop { display: none !important; }
+  .header-btn-mobile  { display: flex !important; }
+  .header-online-pill { display: none !important; }
+
+  .friends-page { padding-bottom: 70px !important; }
+
+  .dashboard-main {
+    padding: 24px 16px !important;
+    padding-bottom: 80px !important;
+  }
+
+  .workspace-card-invite-btn { opacity: 1 !important; }
+}
+
+/* Desktop: sidebar is always visible (override drawer styles) */
+@media (min-width: 769px) {
+  .sidebar-desktop {
+    display: flex !important;
+    position: relative !important;
+    transform: translateX(0) !important;
+    box-shadow: none !important;
+    height: 100% !important;
+    z-index: auto !important;
+  }
+  .sidebar-overlay { display: none !important; }
+  .mobile-nav { display: none !important; }
+  .chat-member-panel { display: contents !important; }
+  .chat-video-panel {
+    width: auto !important;
+    min-width: unset !important;
+    overflow: visible !important;
+    display: contents !important;
+  }
+  .header-btn-desktop { display: flex !important; }
+  .header-btn-mobile  { display: none !important; }
+  .header-online-pill { display: flex !important; }
+}
+
+/* Fullscreen call controls — above mobile nav */
+@media (max-width: 768px) {
+  .fs-controls {
+    bottom: 76px !important;
+    padding: 10px 16px !important;
+    gap: 8px !important;
+  }
+}
+
+/* Login mobile logo — only visible on mobile */
+.login-mobile-logo { display: none; }
+
+@media (max-width: 768px) {
+  .login-mobile-logo { display: flex !important; }
+
+  /* Remove 480px override since we handle it in 768px */
+}
