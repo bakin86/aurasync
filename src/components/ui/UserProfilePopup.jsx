@@ -21,6 +21,8 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const popupRef = useRef(null);
 
   const isOwnProfile = currentUser?.id === initialUser?.id;
+  const { profile } = useAuth();
+  const bio = isOwnProfile ? profile?.bio : null;
 
   const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
   const [friendStatus, setFriendStatus] = useState(null);
@@ -51,8 +53,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     if (hrs < 24)  return `${hrs}ц өмнө`;
     return `${Math.floor(hrs / 24)}х өмнө`;
   };
-  const { profile } = useAuth();
-const bio = isOwnProfile ? profile?.bio : null;
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
@@ -189,10 +189,11 @@ const bio = isOwnProfile ? profile?.bio : null;
               {isOnline ? "● Online" : `⚫ ${formatLastSeen(user?.lastSeen)}`}
             </span>
           </div>
+          {bio && (
+            <p style={{ fontSize: 12, color: "#b8bdd8", marginTop: 4, lineHeight: 1.6, margin: "4px 0 0" }}>{bio}</p>
+          )}
         </div>
-        {bio && (
-  <p style={{ fontSize: 12, color: "#b8bdd8", marginTop: 6, lineHeight: 1.6 }}>{bio}</p>
-)}
+
         {/* Account info card — ProfilePage-тэй адил */}
         <div style={{
           background: "#0c0f32",
