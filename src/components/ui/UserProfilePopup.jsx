@@ -24,13 +24,21 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
 
   const isDark = theme === "dark";
   const isOwnProfile = currentUser?.id === initialUser?.id;
+
+  // Өөрийн профайл бол currentUser + profile-аас авах, өөрчлөлт хийхэд автоматаар шинэчлэгдэнэ
+  const displayUser = isOwnProfile ? currentUser : initialUser;
   const bio = isOwnProfile ? (profile?.bio || "") : "";
 
-  const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
+  const [user, setUser]                 = useState(displayUser);
   const [friendStatus, setFriendStatus] = useState(null);
   const [isBlocked, setIsBlocked]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
+
+  // currentUser өөрчлөгдөхөд popup-г шинэчлэх
+  useEffect(() => {
+    if (isOwnProfile) setUser(currentUser);
+  }, [currentUser, isOwnProfile]);
 
   const isOnline    = isOwnProfile ? true : onlineUsers.includes(user?.id);
   const statusColor = isOnline ? "#22c55e" : "#6b7280";
@@ -40,7 +48,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     : null;
   const avatarGrad = AVATAR_GRADIENTS[(user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
 
-  // Theme colors — ProfilePage-тэй адил
   const P = {
     bg:      isDark ? "#080b28"  : "#ffffff",
     card:    isDark ? "#080b28"  : "#ffffff",
@@ -62,7 +69,7 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     if (!dateStr) return "Offline";
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1)  return "Яг одоо";
+    if (mins < 5)  return "Offline";
     if (mins < 60) return `${mins}м өмнө`;
     const hrs = Math.floor(mins / 60);
     if (hrs < 24)  return `${hrs}ц өмнө`;
@@ -105,6 +112,12 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  const handleOpenProfile = (e) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent("open-profile"));
+    onClose();
+  };
+
   const POPUP_W = 320;
   const POPUP_H = isOwnProfile ? 300 : 400;
   const top  = Math.max(60, Math.min((position?.y || 200) - 30, window.innerHeight - POPUP_H - 20));
@@ -139,10 +152,11 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>✕</button>
 
-        {/* Засах товч — өөрийн профайл */}
+        {/* Засах товч */}
         {isOwnProfile && (
           <button
-            onClick={() => { window.dispatchEvent(new CustomEvent("open-profile")); onClose(); }}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={handleOpenProfile}
             style={{
               position: "absolute", bottom: 10, right: 14,
               padding: "6px 14px", borderRadius: 20,
@@ -210,15 +224,10 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
 
         {/* Account info card */}
         <div style={{
-          background: P.card2,
-          border: `1px solid ${P.border}`,
-          borderRadius: 14, padding: "12px 14px",
-          marginBottom: 14,
+          background: P.card2, border: `1px solid ${P.border}`,
+          borderRadius: 14, padding: "12px 14px", marginBottom: 14,
         }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: ".08em",
-            textTransform: "uppercase", color: P.muted, marginBottom: 10,
-          }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: P.muted, marginBottom: 10 }}>
             ДАНСНЫ МЭДЭЭЛЭЛ
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -232,12 +241,7 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <button
               onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
-              style={{
-                width: "100%", padding: "10px", borderRadius: 12, border: "none",
-                background: "linear-gradient(135deg,#a855f7,#6366f1)",
-                color: "#fff", fontSize: 13, fontWeight: 700,
-                cursor: "pointer", transition: "opacity .15s",
-              }}
+              style={{ width: "100%", padding: "10px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#a855f7,#6366f1)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "opacity .15s" }}
               onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
               onMouseLeave={e => e.currentTarget.style.opacity = "1"}
             >
@@ -245,33 +249,21 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
             </button>
 
             {friendStatus === "friends" ? (
-              <button disabled style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.25)", color: "#4ade80", fontSize: 13, fontWeight: 700, cursor: "default" }}>
-                ✅ Найзууд
-              </button>
+              <button disabled style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.25)", color: "#4ade80", fontSize: 13, fontWeight: 700, cursor: "default" }}>✅ Найзууд</button>
             ) : friendStatus === "pending" ? (
-              <button disabled style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.2)", color: "#fbbf24", fontSize: 13, fontWeight: 700, cursor: "default" }}>
-                ⏳ Хүсэлт илгээсэн
-              </button>
+              <button disabled style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.2)", color: "#fbbf24", fontSize: 13, fontWeight: 700, cursor: "default" }}>⏳ Хүсэлт илгээсэн</button>
             ) : (
               <button
                 onClick={handleAddFriend} disabled={loading}
                 style={{ width: "100%", padding: "10px", borderRadius: 12, background: isDark ? "rgba(27,48,102,.5)" : "rgba(27,48,102,.1)", border: `1px solid ${P.border2}`, color: P.text2, fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
                 onMouseEnter={e => { e.currentTarget.style.background = "#1B3066"; e.currentTarget.style.color = "#fff"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isDark ? "rgba(27,48,102,.5)" : "rgba(27,48,102,.1)"; e.currentTarget.style.color = P.text2; }}
-              >
-                👥 Найз болох
-              </button>
+              >👥 Найз болох</button>
             )}
 
             <button
               onClick={handleBlock} disabled={loading}
-              style={{
-                width: "100%", padding: "10px", borderRadius: 12,
-                background: isBlocked ? "rgba(239,68,68,.12)" : "transparent",
-                border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : P.border}`,
-                color: isBlocked ? "#f87171" : P.muted,
-                fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s",
-              }}
+              style={{ width: "100%", padding: "10px", borderRadius: 12, background: isBlocked ? "rgba(239,68,68,.12)" : "transparent", border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : P.border}`, color: isBlocked ? "#f87171" : P.muted, fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
             >
               {isBlocked ? "🚫 Блок болгосон" : "🚫 Блок"}
             </button>
