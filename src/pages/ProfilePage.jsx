@@ -1,244 +1,390 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useSocket } from "../context/SocketContext.jsx";
-import api from "../api/axios.js";
+import { useTheme } from "../context/ThemeContext.jsx";
 
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace("/api", "");
-
-const AVATAR_GRADIENTS = [
-  "linear-gradient(135deg,#a855f7,#7c3aed)",
-  "linear-gradient(135deg,#3b82f6,#6366f1)",
-  "linear-gradient(135deg,#ec4899,#f43f5e)",
-  "linear-gradient(135deg,#0ea5e9,#22d3ee)",
-  "linear-gradient(135deg,#16a34a,#4ade80)",
+const STATUSES = [
+  { key:"online",  label:"Online",  dot:"#22c55e", bg:"rgba(34,197,94,0.12)",  bd:"rgba(34,197,94,0.3)" },
+  { key:"away",    label:"Away",    dot:"#f59e0b", bg:"rgba(245,158,11,0.12)", bd:"rgba(245,158,11,0.3)" },
+  { key:"busy",    label:"Busy",    dot:"#ef4444", bg:"rgba(239,68,68,0.12)",  bd:"rgba(239,68,68,0.3)" },
+  { key:"offline", label:"Offline", dot:"#6B7399", bg:"rgba(107,115,153,0.1)", bd:"rgba(107,115,153,0.25)" },
 ];
 
-export default function ProfilePage() {
-  const { id } = useParams();
+const COVERS = [
+  { id:"navy",   v:"linear-gradient(135deg,#080B2A,#1B3066,#2a4080)" },
+  { id:"slate",  v:"linear-gradient(135deg,#1B3066,#6B7399,#b8bdd8)" },
+  { id:"violet", v:"linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)" },
+  { id:"ocean",  v:"linear-gradient(135deg,#0c4a6e,#0ea5e9,#38bdf8)" },
+  { id:"forest", v:"linear-gradient(135deg,#14532d,#16a34a,#4ade80)" },
+  { id:"fire",   v:"linear-gradient(135deg,#7c2d12,#f97316,#fbbf24)" },
+  { id:"rose",   v:"linear-gradient(135deg,#881337,#f43f5e,#fb7185)" },
+  { id:"aurora", v:"linear-gradient(135deg,#1B3066,#6B7399,#f0abfc)" },
+];
+
+const SKINS = [
+  {bg:"#FDDBB4",fg:"#8B5E3C"},{bg:"#F5C99A",fg:"#7A4A2A"},
+  {bg:"#E8A87C",fg:"#6B3820"},{bg:"#C68642",fg:"#3E1F00"},
+  {bg:"#8D5524",fg:"#FFD5A8"},{bg:"#4A2912",fg:"#F5C99A"},
+  {bg:"#DBEAFE",fg:"#1D4ED8"},{bg:"#EDE9FE",fg:"#7C3AED"},
+  {bg:"#FCE7F3",fg:"#BE185D"},{bg:"#D1FAE5",fg:"#065F46"},
+];
+
+const API_BASE = (import.meta.env.VITE_API_URL||"http://localhost:3000/api").replace("/api","");
+
+export default function ProfilePage({ onClose }) {
+  const { user, logout, profile, saveProfile, updateProfile, updateAvatar } = useAuth();
+  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
-  const { onlineUsers } = useSocket();
 
-  const [user, setUser]                   = useState(null);
-  const [loading, setLoading]             = useState(true);
-  const [friendStatus, setFriendStatus]   = useState(null);
-  const [isBlocked, setIsBlocked]         = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  // close: use onClose prop if provided (modal mode), else navigate back (route mode)
+  const handleClose = () => onClose ? onClose() : navigate(-1);
+  const isDark = theme === "dark";
 
-  const isOwnProfile = currentUser?.id === id;
-  const isOnline     = onlineUsers.includes(id);
-
-  useEffect(() => {
-    if (isOwnProfile) {
-      setUser(currentUser);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    api.get(`/auth/user/${id}`)
-      .then(res => setUser(res.data.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-
-    api.get("/friends").then(res => {
-      const friends = res.data.data || [];
-      if (friends.find(f => f.id === id)) setFriendStatus("friends");
-    }).catch(() => {});
-
-    api.get("/friends/requests").then(res => {
-      const reqs = res.data.data || [];
-      if (reqs.find(r => r.senderId === currentUser?.id)) setFriendStatus("pending");
-    }).catch(() => {});
-
-    api.get(`/blocks/check/${id}`).then(res => {
-      setIsBlocked(res.data.data.blocked);
-    }).catch(() => {});
-  }, [id]);
-
-  const handleAddFriend = async () => {
-    if (!user) return;
-    setActionLoading(true);
-    try {
-      await api.post("/friends/request", { username: user.username });
-      setFriendStatus("pending");
-    } catch (err) { console.error(err); }
-    finally { setActionLoading(false); }
-  };
-
-  const handleBlock = async () => {
-    setActionLoading(true);
-    try {
-      const res = await api.post(`/blocks/${id}`);
-      setIsBlocked(res.data.data.blocked);
-    } catch (err) { console.error(err); }
-    finally { setActionLoading(false); }
-  };
-
-  const avatarSrc = user?.avatar
-    ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
-    : null;
-
-  const gradientIdx = (user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length;
-  const avatarGrad  = AVATAR_GRADIENTS[gradientIdx];
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    return new Date(dateStr).toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric" });
-  };
-
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#04061a,#080b28)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ color: "#6B7399", fontSize: 14 }}>Уншиж байна...</div>
-    </div>
+  const [username, setUsername] = useState(user?.username??"");
+  const [bio,      setBio]      = useState(profile.bio??"");
+  const [status,   setStatus]   = useState(profile.status??"online");
+  const [coverId,  setCoverId]  = useState(profile.coverId??"navy");
+  const [skinIdx,  setSkinIdx]  = useState(profile.skinIdx??0);
+  const [avatarUrl,setAvatarUrl]= useState(
+    user?.avatar?(user.avatar.startsWith("http")?user.avatar:API_BASE+user.avatar):null
   );
+  const [editing,  setEditing]  = useState(false);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
+  const [showSkins,setShowSkins]= useState(false);
+  const [error,    setError]    = useState("");
+  const avatarRef = useRef(null);
+
+  useEffect(()=>{ if(user?.username) setUsername(user.username); },[user?.username]);
+
+  const skin  = SKINS[skinIdx]||SKINS[0];
+  const cover = COVERS.find(c=>c.id===coverId)?.v||COVERS[0].v;
+  const stObj = STATUSES.find(s=>s.key===status)||STATUSES[0];
+  const initials = user?.username?.slice(0,2).toUpperCase()||"??";
+
+  // Dark/Light palette
+  const P = {
+    bg:       isDark ? "#04061a"   : "#F0F0F5",
+    card:     isDark ? "#080b28"   : "#ffffff",
+    card2:    isDark ? "#0c0f32"   : "#f4f4fb",
+    border:   isDark ? "#151d4a"   : "#c8c8dc",
+    border2:  isDark ? "#1e2d6a"   : "#b0b0cc",
+    text:     isDark ? "#F0F0F5"   : "#04061a",
+    text2:    isDark ? "#b8bdd8"   : "#151d4a",
+    muted:    isDark ? "#6B7399"   : "#6B7399",
+    inputBg:  isDark ? "#04061a"   : "#F0F0F5",
+    hoverBg:  isDark ? "rgba(107,115,153,0.15)" : "rgba(27,48,102,0.07)",
+    shadow:   isDark
+      ? "0 32px 80px rgba(8,11,42,0.8), 0 0 0 1px rgba(27,48,102,0.4)"
+      : "0 8px 48px rgba(8,11,42,0.12), 0 1px 4px rgba(8,11,42,0.06)",
+  };
+
+  const inputStyle = {
+    width:"100%", padding:"9px 12px", borderRadius:10, boxSizing:"border-box",
+    border:`1px solid ${P.border2}`, background:P.inputBg, color:P.text,
+    fontSize:13, outline:"none", transition:"border-color .15s, box-shadow .15s",
+    fontFamily:"inherit",
+  };
+  const labelStyle = {
+    fontSize:10, fontWeight:700, letterSpacing:"0.07em",
+    textTransform:"uppercase", color:P.muted, marginBottom:6, display:"block",
+  };
+  const onFocus = e=>{ e.target.style.borderColor="#6B7399"; e.target.style.boxShadow="0 0 0 3px rgba(107,115,153,0.15)"; };
+  const onBlur  = e=>{ e.target.style.borderColor=P.border2; e.target.style.boxShadow="none"; };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0]; if(!file) return;
+    setAvatarUrl(URL.createObjectURL(file));
+    const r = await updateAvatar(file);
+    if(r.ok&&r.avatarUrl) setAvatarUrl(r.avatarUrl.startsWith("http")?r.avatarUrl:API_BASE+r.avatarUrl);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault(); setError(""); setSaving(true);
+    try {
+      if(username.trim()&&username.trim()!==user?.username){
+        const r = await updateProfile({username:username.trim()});
+        if(!r.ok){ setError(r.error); return; }
+      }
+      saveProfile({bio,status,coverId,skinIdx});
+      await new Promise(r=>setTimeout(r,250));
+      setSaved(true); setEditing(false);
+      setTimeout(()=>setSaved(false),2000);
+    } finally { setSaving(false); }
+  };
 
   return (
     <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg,#04061a 0%,#080b28 50%,#04061a 100%)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
-    }}>
-      {/* Back button */}
-      <button
-        onClick={() => navigate(-1)}
-        style={{
-          position: "fixed", top: 20, left: 20,
-          padding: "8px 16px", borderRadius: 12,
-          background: "rgba(27,48,102,.4)", border: "1px solid #1B3066",
-          color: "#b8bdd8", fontSize: 13, fontWeight: 600,
-          cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
-          zIndex: 10,
-        }}
-      >
-        ← Буцах
-      </button>
-
+      position:"fixed", inset:0, zIndex:200,
+      display:"flex", alignItems:"center", justifyContent:"center",
+      background: isDark ? "rgba(8,11,42,0.75)" : "rgba(8,11,42,0.4)",
+      backdropFilter:"blur(6px)",
+      animation:"fadeIn .2s ease both",
+      padding:16,
+    }}
+      onClick={e=>{ if(e.target===e.currentTarget) handleClose(); }}
+    >
       <div style={{
-        width: "100%", maxWidth: 420,
-        background: "#0D1035",
-        border: "1px solid #1B3066",
-        borderRadius: 24,
-        overflow: "hidden",
-        boxShadow: "0 24px 64px rgba(8,11,42,0.8)",
+        width:"100%", maxWidth:400, borderRadius:24,
+        background:P.card, border:`1px solid ${P.border}`,
+        boxShadow:P.shadow,
+        maxHeight:"92vh", display:"flex", flexDirection:"column",
+        animation:"fadeUp .3s cubic-bezier(0.22,1,0.36,1) both",
+        overflow:"hidden",
       }}>
-        {/* Banner */}
+
+        {/* Top bar */}
         <div style={{
-          height: 120,
-          background: "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
-          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
-        }} />
+          display:"flex", alignItems:"center", gap:10,
+          padding:"14px 18px 10px",
+          borderBottom:`1px solid ${P.border}`, flexShrink:0,
+        }}>
+          <button onClick={handleClose} style={{
+            display:"flex", alignItems:"center", gap:6,
+            background:"none", border:"none", cursor:"pointer",
+            color:P.muted, fontSize:12, padding:"4px 8px",
+            borderRadius:8, transition:"all .15s",
+          }}
+            onMouseEnter={e=>{e.currentTarget.style.color=P.text;e.currentTarget.style.background=P.hoverBg;}}
+            onMouseLeave={e=>{e.currentTarget.style.color=P.muted;e.currentTarget.style.background="none";}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Буцах
+          </button>
+          <span style={{fontSize:13,fontWeight:600,color:P.text,flex:1}}>Профайл</span>
+          {/* Theme toggle */}
+          <button onClick={toggle} style={{
+            display:"flex", alignItems:"center", gap:6,
+            background:P.hoverBg, border:`1px solid ${P.border}`,
+            color:P.muted, fontSize:11, fontWeight:500,
+            padding:"5px 10px", borderRadius:20, cursor:"pointer",
+            transition:"all .15s",
+          }}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="#6B7399";e.currentTarget.style.color=P.text;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=P.border;e.currentTarget.style.color=P.muted;}}>
+            {isDark
+              ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Light</>
+              : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Dark</>
+            }
+          </button>
+          
+        </div>
 
-        {/* Content */}
-        <div style={{ padding: "0 24px 24px" }}>
-          {/* Avatar */}
-          <div style={{ marginTop: -40, marginBottom: 16 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              border: "4px solid #0D1035",
-              background: avatarSrc ? "transparent" : avatarGrad,
-              overflow: "hidden",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: `0 0 0 2px ${isOnline ? "#4ade80" : "#6b7280"}55`,
-              position: "relative",
-            }}>
-              {avatarSrc
-                ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <span style={{ fontSize: 32, fontWeight: 900, color: "#fff" }}>
-                    {user?.username?.[0]?.toUpperCase() || "?"}
-                  </span>
-              }
-              <span style={{
-                position: "absolute", bottom: 4, right: 4,
-                width: 14, height: 14, borderRadius: "50%",
-                background: isOnline ? "#4ade80" : "#6b7280",
-                border: "2px solid #0D1035",
-              }} />
+        {/* Cover */}
+        <div style={{position:"relative",height:96,background:cover,flexShrink:0}}>
+          <div style={{position:"absolute",inset:0,
+            backgroundImage:"radial-gradient(circle,rgba(240,240,245,0.15) 1px,transparent 1px)",
+            backgroundSize:"18px 18px"}}/>
+          {editing && (
+            <div style={{position:"absolute",bottom:8,right:12,display:"flex",gap:5,zIndex:10}}>
+              {COVERS.map(c=>(
+                <button key={c.id} onClick={()=>setCoverId(c.id)} style={{
+                  width:20,height:20,borderRadius:"50%",background:c.v,
+                  border:coverId===c.id?"2.5px solid #F0F0F5":"2px solid transparent",
+                  cursor:"pointer",transition:"transform .15s",
+                  transform:coverId===c.id?"scale(1.3)":"scale(1)",
+                }}/>
+              ))}
             </div>
-          </div>
-
-          {/* Name */}
-          <div style={{ marginBottom: 20 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: "#F0F0F5", margin: 0 }}>
-              {user?.username || "Хэрэглэгч"}
-            </h1>
-            <p style={{ fontSize: 13, color: isOnline ? "#4ade80" : "#6b7280", marginTop: 4 }}>
-              {isOnline ? "● Online" : "⚫ Offline"}
-            </p>
-            {user?.email && (
-              <p style={{ fontSize: 12, color: "#6B7399", marginTop: 4 }}>{user.email}</p>
-            )}
-            {user?.createdAt && (
-              <p style={{ fontSize: 11, color: "#4a5180", marginTop: 4 }}>
-                Нэгдсэн: {formatDate(user.createdAt)}
-              </p>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {!isOwnProfile ? (
-              <>
-                <button
-                  onClick={() => navigate(`/dm/${id}`)}
-                  style={{
-                    width: "100%", padding: "12px", borderRadius: 14, border: "none",
-                    background: "linear-gradient(135deg,#a855f7,#6366f1)",
-                    color: "#fff", fontSize: 14, fontWeight: 700,
-                    cursor: "pointer", transition: "opacity .15s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
-                  onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                >
-                  💬 Мессеж илгээх
-                </button>
-
-                {friendStatus === "friends" ? (
-                  <button disabled style={{ width: "100%", padding: "12px", borderRadius: 14, background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.3)", color: "#4ade80", fontSize: 14, fontWeight: 700, cursor: "default" }}>
-                    ✅ Найзууд
-                  </button>
-                ) : friendStatus === "pending" ? (
-                  <button disabled style={{ width: "100%", padding: "12px", borderRadius: 14, background: "rgba(251,191,36,.1)", border: "1px solid rgba(251,191,36,.3)", color: "#fbbf24", fontSize: 14, fontWeight: 700, cursor: "default" }}>
-                    ⏳ Хүсэлт илгээсэн
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleAddFriend}
-                    disabled={actionLoading}
-                    style={{ width: "100%", padding: "12px", borderRadius: 14, background: "rgba(27,48,102,.4)", border: "1px solid #1B3066", color: "#b8bdd8", fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "all .15s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#1B3066"; e.currentTarget.style.color = "#fff"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(27,48,102,.4)"; e.currentTarget.style.color = "#b8bdd8"; }}
-                  >
-                    👥 Найз болох
-                  </button>
-                )}
-
-                <button
-                  onClick={handleBlock}
-                  disabled={actionLoading}
-                  style={{
-                    width: "100%", padding: "12px", borderRadius: 14,
-                    background: isBlocked ? "rgba(239,68,68,.15)" : "transparent",
-                    border: isBlocked ? "1px solid rgba(239,68,68,.3)" : "1px solid #1B3066",
-                    color: isBlocked ? "#f87171" : "#6B7399",
-                    fontSize: 14, fontWeight: 700, cursor: "pointer", transition: "all .15s",
-                  }}
-                >
-                  {isBlocked ? "🚫 Блок болгосон — Арилгах" : "🚫 Блок"}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent("open-profile"))}
-                style={{ width: "100%", padding: "12px", borderRadius: 14, background: "rgba(27,48,102,.4)", border: "1px solid #1B3066", color: "#b8bdd8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
-              >
-                ✏️ Профайл засах
+          )}
+          {/* Avatar */}
+          <div style={{position:"absolute",left:18,bottom:-40,zIndex:20}}>
+            <div style={{position:"relative"}}>
+              <div style={{
+                width:80,height:80,borderRadius:"50%",overflow:"hidden",
+                border:`4px solid ${P.card}`,
+                boxShadow:`0 0 0 2px ${P.border}, 0 4px 20px rgba(8,11,42,0.4)`,
+                background:avatarUrl?"transparent":skin.bg,
+                display:"flex",alignItems:"center",justifyContent:"center",
+              }}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  : <span style={{fontSize:24,fontWeight:900,color:skin.fg,lineHeight:1}}>{initials}</span>
+                }
+              </div>
+              {/* Camera overlay */}
+              <button onClick={()=>avatarRef.current?.click()} style={{
+                position:"absolute",inset:0,borderRadius:"50%",
+                background:"rgba(8,11,42,0.6)",display:"flex",
+                alignItems:"center",justifyContent:"center",
+                border:"none",cursor:"pointer",opacity:0,transition:"opacity .15s",
+              }}
+                onMouseEnter={e=>e.currentTarget.style.opacity=1}
+                onMouseLeave={e=>e.currentTarget.style.opacity=0}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F0F0F5" strokeWidth="2">
+                  <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                  <circle cx="12" cy="13" r="4"/>
+                </svg>
               </button>
+              <input ref={avatarRef} type="file" accept="image/*" style={{display:"none"}} onChange={handleAvatarChange}/>
+              {!avatarUrl&&(
+                <button onClick={()=>setShowSkins(v=>!v)} style={{
+                  position:"absolute",bottom:-2,right:-2,
+                  width:22,height:22,borderRadius:"50%",
+                  background:skin.bg,border:`2px solid ${P.card}`,
+                  cursor:"pointer",transition:"transform .15s",
+                }}
+                  onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
+                  onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}/>
+              )}
+              <span style={{
+                position:"absolute",bottom:2,right:16,
+                width:14,height:14,borderRadius:"50%",
+                background:stObj.dot,border:`3px solid ${P.card}`,zIndex:30,
+              }}/>
+            </div>
+            {showSkins&&(
+              <div style={{
+                position:"absolute",top:"calc(100% + 8px)",left:0,zIndex:50,
+                background:P.card2,border:`1px solid ${P.border}`,borderRadius:14,
+                padding:12,boxShadow:P.shadow,
+                animation:"popIn .18s cubic-bezier(0.22,1,0.36,1) both",
+              }}>
+                <p style={{fontSize:9,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:P.muted,marginBottom:8}}>Skin өнгө</p>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6}}>
+                  {SKINS.map((s,i)=>(
+                    <button key={i} onClick={()=>{setSkinIdx(i);setShowSkins(false);}} style={{
+                      width:28,height:28,borderRadius:"50%",background:s.bg,
+                      border:`2px solid ${i===skinIdx?"#6B7399":s.fg+"44"}`,
+                      cursor:"pointer",transition:"transform .15s",
+                      transform:i===skinIdx?"scale(1.2)":"scale(1)",
+                    }}/>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div style={{flex:1,overflowY:"auto",padding:"0 18px 18px",scrollbarWidth:"none"}}>
+          {/* Edit toggle */}
+          <div style={{display:"flex",justifyContent:"flex-end",paddingTop:50,marginBottom:4}}>
+            <button onClick={()=>setEditing(v=>!v)} style={{
+              display:"flex",alignItems:"center",gap:6,
+              padding:"6px 14px",borderRadius:10,fontSize:12,fontWeight:600,
+              border:`1px solid ${editing?P.border:"transparent"}`,cursor:"pointer",transition:"all .15s",
+              background:editing?P.card2:isDark?"#F0F0F5":"#04061a",
+              color:editing?P.muted:isDark?"#04061a":"#F0F0F5",
+            }}
+              onMouseEnter={e=>{if(!editing){e.currentTarget.style.opacity="0.85";}else{e.currentTarget.style.borderColor="#6B7399";}}}
+              onMouseLeave={e=>{e.currentTarget.style.opacity="1";if(editing)e.currentTarget.style.borderColor=P.border;}}>
+              {editing
+                ? <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Болих</>
+                : <><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>Засах</>
+              }
+            </button>
+          </div>
+
+          {/* Name + status */}
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+              <h2 style={{fontSize:16,fontWeight:700,color:P.text,margin:0}}>{user?.username}</h2>
+              <span style={{
+                display:"inline-flex",alignItems:"center",gap:5,
+                fontSize:11,fontWeight:600,padding:"3px 8px",borderRadius:20,
+                background:stObj.bg,border:`1px solid ${stObj.bd}`,color:stObj.dot,
+              }}>
+                <span style={{width:6,height:6,borderRadius:"50%",background:stObj.dot}}/>
+                {stObj.label}
+              </span>
+            </div>
+            {bio&&<p style={{fontSize:12,color:P.text2,marginTop:6,lineHeight:1.6}}>{bio}</p>}
+          </div>
+
+          {/* Account info */}
+          {!editing&&(
+            <div style={{
+              background:P.card2,border:`1px solid ${P.border}`,
+              borderRadius:14,padding:14,marginBottom:12,
+              animation:"fadeUp .2s ease both",
+            }}>
+              <p style={{...labelStyle,marginBottom:10}}>Дансны мэдээлэл</p>
+              {[
+                {label:"Бүртгүүлсэн", val: user?.createdAt?new Date(user.createdAt).toLocaleDateString("mn-MN"):"—"},
+              ].map(({label,val})=>(
+                <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <span style={{fontSize:12,color:P.muted}}>{label}</span>
+                  <span style={{fontSize:12,color:P.text2}}>{val}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Edit form */}
+          {editing&&(
+            <form onSubmit={handleSave} style={{
+              background:P.card2,border:`1px solid ${P.border}`,
+              borderRadius:14,padding:14,marginBottom:12,
+              display:"flex",flexDirection:"column",gap:12,
+              animation:"fadeUp .2s ease both",
+            }}>
+              <div>
+                <span style={labelStyle}>Хэрэглэгчийн нэр</span>
+                <input style={inputStyle} type="text" value={username}
+                  onChange={e=>setUsername(e.target.value)} onFocus={onFocus} onBlur={onBlur}/>
+              </div>
+              <div>
+                <span style={labelStyle}>Био</span>
+                <textarea style={{...inputStyle,resize:"none",lineHeight:1.5}} rows={2}
+                  value={bio} onChange={e=>setBio(e.target.value)}
+                  placeholder="Өөрийгөө танилцуулах…" onFocus={onFocus} onBlur={onBlur}/>
+              </div>
+              <div>
+                <span style={labelStyle}>Статус</span>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6}}>
+                  {STATUSES.map(s=>(
+                    <button key={s.key} type="button" onClick={()=>setStatus(s.key)} style={{
+                      display:"flex",flexDirection:"column",alignItems:"center",gap:4,
+                      padding:"8px 4px",borderRadius:10,fontSize:10,fontWeight:600,
+                      border:`1px solid ${status===s.key?s.bd:P.border}`,
+                      background:status===s.key?s.bg:"transparent",
+                      color:status===s.key?s.dot:P.muted,
+                      cursor:"pointer",transition:"all .15s",
+                    }}>
+                      <span style={{width:8,height:8,borderRadius:"50%",background:s.dot}}/>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {error&&<p style={{fontSize:12,color:"#f87171",margin:0}}>{error}</p>}
+              <button type="submit" disabled={saving} style={{
+                display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                padding:"10px",borderRadius:10,border:"none",
+                background:saved?"rgba(34,197,94,0.15)":"linear-gradient(135deg,#1B3066,#2a4080)",
+                color:saved?"#4ade80":"#F0F0F5",
+                border:saved?"1px solid rgba(34,197,94,0.3)":"none",
+                fontSize:13,fontWeight:600,cursor:saving?"not-allowed":"pointer",
+                opacity:saving?0.6:1,transition:"all .2s",
+                boxShadow:saved?"none":"0 4px 14px rgba(27,48,102,0.4)",
+              }}
+                onMouseEnter={e=>{if(!saving&&!saved){e.currentTarget.style.background="linear-gradient(135deg,#2a4080,#6B7399)";e.currentTarget.style.boxShadow="0 6px 20px rgba(107,115,153,0.35)";}}}
+                onMouseLeave={e=>{if(!saving&&!saved){e.currentTarget.style.background="linear-gradient(135deg,#1B3066,#2a4080)";e.currentTarget.style.boxShadow="0 4px 14px rgba(27,48,102,0.4)";}}}
+              >
+                {saving?"Хадгалж байна…":saved?"✓ Хадгаллаа!":"Хадгалах"}
+              </button>
+            </form>
+          )}
+
+          {/* Logout */}
+          <button onClick={logout} style={{
+            width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+            padding:"10px",borderRadius:12,
+            border:"1px solid rgba(239,68,68,0.25)",
+            background:"transparent",color:"#f87171",
+            fontSize:13,fontWeight:600,cursor:"pointer",transition:"all .15s",
+          }}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(239,68,68,0.08)";e.currentTarget.style.borderColor="rgba(239,68,68,0.4)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="transparent";e.currentTarget.style.borderColor="rgba(239,68,68,0.25)";}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Гарах
+          </button>
         </div>
       </div>
     </div>
