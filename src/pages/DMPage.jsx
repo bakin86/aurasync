@@ -9,6 +9,7 @@ import Sidebar from "../components/sidebar/Sidebar.jsx";
 import MessageInput from "../components/chat/MessageInput.jsx";
 import UserProfilePopup from "../components/ui/UserProfilePopup.jsx";
 import VoiceMessage from "../components/chat/VoiceMessage.jsx";
+import ProfilePage from "./ProfilePage.jsx";
 
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api\/?$/, "");
 
@@ -125,7 +126,15 @@ export default function DMPage() {
   const [replyTo,     setReplyTo]     = useState(null);
   const [typingUsers, setTypingUsers] = useState([]);
   const [profilePopup, setProfilePopup] = useState(null);
+  const [showProfile, setShowProfile] = useState(false);
   const bottomRef = useRef(null);
+
+  // open-profile event
+  useEffect(() => {
+    const handler = () => setShowProfile(true);
+    window.addEventListener("open-profile", handler);
+    return () => window.removeEventListener("open-profile", handler);
+  }, []);
   const canMsg = !isBlocked && !isBlockedBy;
   const isOnline = onlineUsers.includes(userId);
 
@@ -418,7 +427,8 @@ export default function DMPage() {
         </div>
       )}
 
-      {profilePopup && <UserProfilePopup user={profilePopup.user} position={profilePopup.position} onClose={() => setProfilePopup(null)} />}
+      {profilePopup && <UserProfilePopup user={profilePopup.user} position={profilePopup.position} onClose={() => setProfilePopup(null)} /> }
+      {showProfile && <ProfilePage onClose={() => setShowProfile(false)} />}
 
       <style>{`
         @keyframes vsp    { 0%,100%{opacity:1} 50%{opacity:.4} }
