@@ -43,32 +43,34 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const isDark = theme === "dark";
   const isOwnProfile = currentUser?.id === initialUser?.id;
 
+  // Өөрийн профайл бол currentUser + profile-аас шууд авах — edit хийхэд автоматаар шинэчлэгдэнэ
+  const displayName   = isOwnProfile ? currentUser?.username : initialUser?.username;
+  const ownStatus     = profile?.status || "online";
+  const stObj         = STATUSES.find(s => s.key === ownStatus) || STATUSES[0];
+  const bio           = isOwnProfile ? (profile?.bio || "") : "";
+  const coverId       = profile?.coverId || "navy";
+  const cover         = COVERS.find(c => c.id === coverId)?.v || COVERS[0].v;
+
   const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
   const [friendStatus, setFriendStatus] = useState(null);
   const [isBlocked, setIsBlocked]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
 
-  // ProfilePage-тэй адил — profile-аас status, bio, cover авах
-  const ownStatus = profile?.status || "online";
-  const stObj     = STATUSES.find(s => s.key === ownStatus) || STATUSES[0];
-  const bio       = isOwnProfile ? (profile?.bio || "") : "";
-  const coverId   = profile?.coverId || "navy";
-  const cover     = COVERS.find(c => c.id === coverId)?.v || COVERS[0].v;
-
-  // currentUser өөрчлөгдөхөд шинэчлэх
+  // currentUser өөрчлөгдөхөд (username, avatar edit) popup шинэчлэх
   useEffect(() => {
-    if (isOwnProfile) setUser(currentUser);
-  }, [currentUser, isOwnProfile]);
+    if (isOwnProfile) setUser({ ...currentUser });
+  }, [currentUser?.username, currentUser?.avatar, isOwnProfile]);
 
   const isOnline = isOwnProfile
     ? (ownStatus !== "offline")
     : onlineUsers.includes(user?.id);
 
-  const avatarSrc  = user?.avatar
-    ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
-    : null;
-  const avatarGrad = AVATAR_GRADIENTS[(user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
+  const avatarSrc  = isOwnProfile
+    ? (currentUser?.avatar ? (currentUser.avatar.startsWith("http") ? currentUser.avatar : API_BASE + currentUser.avatar) : null)
+    : (user?.avatar ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar) : null);
+
+  const avatarGrad = AVATAR_GRADIENTS[((isOwnProfile ? currentUser?.username : user?.username)?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
 
   const P = {
     card:    isDark ? "#080b28"  : "#ffffff",
@@ -78,6 +80,10 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     text:    isDark ? "#F0F0F5"  : "#04061a",
     text2:   isDark ? "#b8bdd8"  : "#151d4a",
     muted:   isDark ? "#6B7399"  : "#6B7399",
+    // Мессеж товч dark/light өнгө
+    msgBg:   isDark ? "rgba(107,115,153,0.2)" : "rgba(27,48,102,0.08)",
+    msgColor:isDark ? "#b8bdd8"  : "#151d4a",
+    msgBorder:isDark ? "#1e2d6a" : "#b0b0cc",
     shadow:  isDark ? "0 32px 80px rgba(8,11,42,.8), 0 0 0 1px rgba(27,48,102,.4)" : "0 8px 48px rgba(8,11,42,.15)",
   };
 
@@ -156,7 +162,7 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
       border: `1px solid ${P.border}`,
     }}>
 
-      {/* Cover — ProfilePage-тэй яг адил cover */}
+      {/* Cover */}
       <div style={{
         height: 90,
         background: isOwnProfile ? cover : "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
@@ -164,7 +170,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
         backgroundSize: "18px 18px",
         position: "relative",
       }}>
-        {/* Close */}
         <button onClick={onClose} style={{
           position: "absolute", top: 10, right: 10,
           width: 28, height: 28, borderRadius: "50%",
@@ -173,7 +178,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>✕</button>
 
-        {/* Засах товч */}
         {isOwnProfile && (
           <button
             onMouseDown={e => e.stopPropagation()}
@@ -210,10 +214,9 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
             }}>
               {avatarSrc
                 ? <img src={avatarSrc} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <span style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{user?.username?.[0]?.toUpperCase()}</span>
+                : <span style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{displayName?.[0]?.toUpperCase()}</span>
               }
             </div>
-            {/* Status dot — ProfilePage-тэй адил */}
             <span style={{
               position: "absolute", bottom: 4, right: 2,
               width: 14, height: 14, borderRadius: "50%",
@@ -226,11 +229,10 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
 
       {/* Body */}
       <div style={{ padding: "44px 18px 18px" }}>
-
-        {/* Name & status — ProfilePage-тэй адил */}
+        {/* Name & status */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 17, fontWeight: 800, color: P.text }}>{user?.username}</span>
+            <span style={{ fontSize: 17, fontWeight: 800, color: P.text }}>{displayName}</span>
             {isOwnProfile ? (
               <span style={{
                 display: "inline-flex", alignItems: "center", gap: 5,
@@ -266,24 +268,28 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 13, color: P.muted }}>Бүртгүүлсэн</span>
-            <span style={{ fontSize: 13, color: P.text2, fontWeight: 600 }}>{formatDate(user?.createdAt)}</span>
+            <span style={{ fontSize: 13, color: P.text2, fontWeight: 600 }}>
+              {formatDate(isOwnProfile ? currentUser?.createdAt : user?.createdAt)}
+            </span>
           </div>
         </div>
 
-        {/* Actions — бусад хэрэглэгч */}
+        {/* Actions */}
         {!isOwnProfile && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {/* Мессеж товч — ногоон өнгөтэй */}
+            {/* Мессеж — dark/light-д тохирсон харанхуй өнгө */}
             <button
               onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
               style={{
-                width: "100%", padding: "10px", borderRadius: 12, border: "none",
-                background: "linear-gradient(135deg,#16a34a,#4ade80)",
-                color: "#fff", fontSize: 13, fontWeight: 700,
-                cursor: "pointer", transition: "opacity .15s",
+                width: "100%", padding: "10px", borderRadius: 12,
+                background: P.msgBg,
+                border: `1px solid ${P.msgBorder}`,
+                color: P.msgColor,
+                fontSize: 13, fontWeight: 700,
+                cursor: "pointer", transition: "all .15s",
               }}
-              onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
-              onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+              onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(107,115,153,0.35)" : "rgba(27,48,102,0.15)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = P.msgBg; }}
             >
               💬 Мессеж илгээх
             </button>
