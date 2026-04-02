@@ -12,7 +12,7 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
   const { user } = useAuth();
   const isDark    = theme === "dark";
 
-  const [tab, setTab]               = useState("general"); // "general" | "invite"
+  const [tab, setTab]               = useState("general");
   const [name, setName]             = useState(workspace?.name || "");
   const [description, setDesc]      = useState(workspace?.description || "");
   const [avatarPreview, setPreview] = useState(
@@ -24,12 +24,10 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
   const [saving,     setSaving]     = useState(false);
   const [saved,      setSaved]      = useState(false);
   const [error,      setError]      = useState("");
-  const [copied,     setCopied]     = useState(false);
 
-  // Invite user state
   const [inviteUsername, setInviteUsername] = useState("");
   const [inviting,       setInviting]       = useState(false);
-  const [inviteResult,   setInviteResult]   = useState(null); // { ok, message, user }
+  const [inviteResult,   setInviteResult]   = useState(null);
   const [invitedUsers,   setInvitedUsers]   = useState([]);
 
   const [myRole,     setMyRole]     = useState("MEMBER");
@@ -37,9 +35,8 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
   const [newRoleName, setNewRoleName] = useState("");
   const [newRoleColor, setNewRoleColor] = useState("#6B7399");
   const [editingRole, setEditingRole] = useState(null);
-  const [members,    setMembers]     = useState([]); // {id, name, color}
+  const [members,    setMembers]     = useState([]);
   const [deleting,   setDeleting]   = useState(false);
-  const [leaving,    setLeaving]    = useState(false);
 
   const fileRef = useRef(null);
 
@@ -55,7 +52,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
     shadow:  isDark ? "0 24px 60px rgba(8,11,42,0.8)" : "0 8px 40px rgba(8,11,42,0.15)",
   };
 
-  // Load current user's role using useAuth user.id
   useEffect(() => {
     const wsId = workspaceId || workspace?.id;
     if (!wsId || !user?.id) return;
@@ -69,7 +65,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
       .catch(() => setMyRole("MEMBER"));
   }, [workspaceId, workspace?.id, user?.id]);
 
-  // Load roles
   useEffect(() => {
     const wsId = workspaceId || workspace?.id;
     if (!wsId) return;
@@ -89,7 +84,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
   const onBlur  = e => { e.target.style.borderColor = P.bd2; e.target.style.boxShadow = "none"; };
   const labelSt = { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: P.muted, marginBottom: 6 };
 
-  // ── Save general settings ──────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
     setError(""); setSaving(true);
@@ -113,7 +107,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
     } finally { setSaving(false); }
   };
 
-  // ── Invite user by username ────────────────────────────────────
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!inviteUsername.trim()) return;
@@ -128,12 +121,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
     } catch (err) {
       setInviteResult({ ok: false, message: err.response?.data?.message || "Алдаа гарлаа" });
     } finally { setInviting(false); }
-  };
-
-  const copyLink = async () => {
-    await navigator.clipboard.writeText(`${window.location.origin}/invite/${workspace?.inviteCode}`);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const TABS = [
@@ -163,7 +150,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${P.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Workspace mini avatar */}
             <div style={{ width: 32, height: 32, borderRadius: 8, background: avatarPreview ? "transparent" : grad, overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#F0F0F5" }}>
               {avatarPreview ? <img src={avatarPreview} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : workspace?.name?.[0]?.toUpperCase()}
             </div>
@@ -194,10 +180,9 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
           ))}
         </div>
 
-        {/* ── Tab: General settings ── */}
+        {/* ── Tab: General ── */}
         {tab === "general" && (
           <form onSubmit={handleSave} style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Avatar picker */}
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <div style={{ width: 72, height: 72, borderRadius: 16, background: avatarPreview ? "transparent" : grad, border: `2px solid ${P.border}`, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(8,11,42,.2)" }}>
@@ -230,22 +215,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
               <input style={inputSt} value={description} onChange={e => setDesc(e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Заавал биш" />
             </div>
 
-            {/* Invite link */}
-            <div>
-              <label style={labelSt}>Урилгын холбоос</label>
-              <div style={{ display: "flex", gap: 6 }}>
-                <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `1px solid ${P.bd2}`, background: P.inputBg, fontSize: 11, color: P.muted, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
-                  <i className="fa-solid fa-link" style={{fontSize:10, flexShrink:0, color:"#6B7399"}}></i>
-                  {`${window.location.origin}/invite/${workspace?.inviteCode}`}
-                </div>
-                <button type="button" onClick={copyLink} style={{ padding: "8px 14px", borderRadius: 10, cursor: "pointer", background: copied ? "rgba(34,197,94,.15)" : isDark ? "rgba(27,48,102,.4)" : "rgba(27,48,102,.1)", border: copied ? "1px solid rgba(34,197,94,.3)" : `1px solid ${P.bd2}`, color: copied ? "#4ade80" : P.text2, fontSize: 12, fontWeight: 600, flexShrink: 0, transition: "all .15s", display: "flex", alignItems: "center", gap: 5 }}>
-                  {copied ? <i className="fa-solid fa-check" style={{fontSize:13}}></i> : <i className="fa-solid fa-copy" style={{fontSize:13}}></i>}
-                  {copied ? "Хуулсан!" : "Хуулах"}
-                </button>
-              </div>
-              <p style={{ fontSize: 11, color: P.muted, marginTop: 5 }}>Энэ холбоосыг хуваалцсанаар хэн ч workspace-д нэгдэх боломжтой.</p>
-            </div>
-
             <div style={{ display: "flex", gap: 8 }}>
               <button type="submit" disabled={saving} style={{ flex: 1, padding: "11px", borderRadius: 10, border: saved ? "1px solid rgba(34,197,94,.3)" : "none", background: saved ? "rgba(34,197,94,.15)" : "linear-gradient(135deg,#1B3066,#2a4080)", color: saved ? "#4ade80" : "#F0F0F5", fontSize: 13, fontWeight: 600, cursor: saving ? "not-allowed" : "pointer", opacity: saving ? .6 : 1, transition: "all .2s", boxShadow: saved ? "none" : "0 4px 14px rgba(27,48,102,.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                 onMouseEnter={e => { if (!saving && !saved) { e.currentTarget.style.background = "linear-gradient(135deg,#2a4080,#6B7399)"; } }}
@@ -270,7 +239,7 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
           </form>
         )}
 
-        {/* ── Tab: Invite user ── */}
+        {/* ── Tab: Invite ── */}
         {tab === "invite" && (
           <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
             <p style={{ fontSize: 13, color: P.muted, margin: 0, lineHeight: 1.6 }}>
@@ -279,10 +248,7 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
 
             <form onSubmit={handleInvite} style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center" }}>
-                <i className="fa-solid fa-magnifying-glass" style={{
-                  fontSize: 12, position: "absolute", left: 10,
-                  color: P.muted, pointerEvents: "none", zIndex: 1,
-                }}></i>
+                <i className="fa-solid fa-magnifying-glass" style={{ fontSize: 12, position: "absolute", left: 10, color: P.muted, pointerEvents: "none", zIndex: 1 }}></i>
                 <input
                   style={{ ...inputSt, paddingLeft: 30 }}
                   value={inviteUsername}
@@ -309,7 +275,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
               </button>
             </form>
 
-            {/* Result message */}
             {inviteResult && (
               <div style={{ padding: "10px 14px", borderRadius: 10, display: "flex", alignItems: "center", gap: 10, background: inviteResult.ok ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)", border: `1px solid ${inviteResult.ok ? "rgba(34,197,94,.25)" : "rgba(239,68,68,.25)"}` }}>
                 {inviteResult.ok && inviteResult.user?.avatar && (
@@ -321,7 +286,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
               </div>
             )}
 
-            {/* Invited this session */}
             {invitedUsers.length > 0 && (
               <div>
                 <label style={labelSt}>Энэ session-д нэмсэн</label>
@@ -341,28 +305,12 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
                 </div>
               </div>
             )}
-
-            {/* Invite link shortcut */}
-            <div style={{ borderTop: `1px solid ${P.border}`, paddingTop: 16 }}>
-              <label style={labelSt}>Холбоосоор урих</label>
-              <div style={{ display: "flex", gap: 6 }}>
-                <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, border: `1px solid ${P.bd2}`, background: P.inputBg, fontSize: 11, color: P.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
-                  <i className="fa-solid fa-link" style={{fontSize:10, flexShrink:0}}></i>
-                  {`${window.location.origin}/invite/${workspace?.inviteCode}`}
-                </div>
-                <button type="button" onClick={copyLink} style={{ padding: "8px 14px", borderRadius: 10, cursor: "pointer", background: copied ? "rgba(34,197,94,.15)" : isDark ? "rgba(27,48,102,.4)" : "rgba(27,48,102,.1)", border: copied ? "1px solid rgba(34,197,94,.3)" : `1px solid ${P.bd2}`, color: copied ? "#4ade80" : P.text2, fontSize: 12, fontWeight: 600, flexShrink: 0, transition: "all .15s", display: "flex", alignItems: "center", gap: 5 }}>
-                  {copied ? <i className="fa-solid fa-check" style={{fontSize:13}}></i> : <i className="fa-solid fa-copy" style={{fontSize:13}}></i>}
-                  {copied ? "Хуулсан!" : "Хуулах"}
-                </button>
-              </div>
-            </div>
           </div>
         )}
 
         {/* ── Tab: Roles ── */}
         {tab === "roles" && (
           <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-            {/* Role list */}
             <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 6 }}>
               {myRole !== "OWNER" && (
                 <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,.06)", border: "1px solid rgba(239,68,68,.2)", fontSize: 12, color: "#f87171", marginBottom: 8 }}>
@@ -376,12 +324,7 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
                 </div>
               )}
               {roles.map(role => (
-                <div key={role.id} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "10px 14px", borderRadius: 12,
-                  background: P.bg2, border: `1px solid ${P.border}`,
-                  transition: "border-color .15s",
-                }}>
+                <div key={role.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderRadius: 12, background: P.bg2, border: `1px solid ${P.border}`, transition: "border-color .15s" }}>
                   {editingRole?.id === role.id ? (
                     <>
                       <input type="color" value={editingRole.color}
@@ -418,7 +361,7 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
                       {myRole === "OWNER" && (
                         <>
                           <button onClick={() => setEditingRole({ id: role.id, name: role.name, color: role.color })}
-                            style={{ padding: "4px 10px", borderRadius: 7, border: `1px solid ${P.border}`, background: "transparent", color: P.text3, fontSize: 11, cursor: "pointer" }}>Edit</button>
+                            style={{ padding: "4px 10px", borderRadius: 7, border: `1px solid ${P.border}`, background: "transparent", color: P.text2, fontSize: 11, cursor: "pointer" }}>Edit</button>
                           <button onClick={async () => {
                             const wsId = workspaceId || workspace?.id;
                             await api.delete(`/workspaces/${wsId}/roles/${role.id}`);
@@ -432,7 +375,6 @@ export default function WorkspaceSettingsModal({ workspace, workspaceId, onClose
               ))}
             </div>
 
-            {/* Add role — OWNER only */}
             {myRole === "OWNER" && (
               <div style={{ padding: "14px 20px", borderTop: `1px solid ${P.border}` }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
