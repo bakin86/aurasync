@@ -57,10 +57,10 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
 
-  // currentUser өөрчлөгдөхөд (username, avatar edit) popup шинэчлэх
+  // currentUser болон profile өөрчлөгдөхөд popup шинэчлэх
   useEffect(() => {
     if (isOwnProfile) setUser({ ...currentUser });
-  }, [currentUser?.username, currentUser?.avatar, isOwnProfile]);
+  }, [currentUser?.username, currentUser?.avatar, profile?.status, profile?.bio, profile?.coverId, isOwnProfile]);
 
   const isOnline = isOwnProfile
     ? (ownStatus !== "offline")
@@ -80,10 +80,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     text:    isDark ? "#F0F0F5"  : "#04061a",
     text2:   isDark ? "#b8bdd8"  : "#151d4a",
     muted:   isDark ? "#6B7399"  : "#6B7399",
-    // Мессеж товч dark/light өнгө
-    msgBg:   isDark ? "rgba(107,115,153,0.2)" : "rgba(27,48,102,0.08)",
-    msgColor:isDark ? "#b8bdd8"  : "#151d4a",
-    msgBorder:isDark ? "#1e2d6a" : "#b0b0cc",
     shadow:  isDark ? "0 32px 80px rgba(8,11,42,.8), 0 0 0 1px rgba(27,48,102,.4)" : "0 8px 48px rgba(8,11,42,.15)",
   };
 
@@ -277,22 +273,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
         {/* Actions */}
         {!isOwnProfile && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {/* Мессеж — dark/light-д тохирсон харанхуй өнгө */}
-            <button
-              onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
-              style={{
-                width: "100%", padding: "10px", borderRadius: 12,
-                background: P.msgBg,
-                border: `1px solid ${P.msgBorder}`,
-                color: P.msgColor,
-                fontSize: 13, fontWeight: 700,
-                cursor: "pointer", transition: "all .15s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = isDark ? "rgba(107,115,153,0.35)" : "rgba(27,48,102,0.15)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = P.msgBg; }}
-            >
-              💬 Мессеж илгээх
-            </button>
 
             {friendStatus === "friends" ? (
               <button disabled style={{ width: "100%", padding: "10px", borderRadius: 12, background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.25)", color: "#4ade80", fontSize: 13, fontWeight: 700, cursor: "default" }}>✅ Найзууд</button>
