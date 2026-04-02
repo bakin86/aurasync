@@ -293,7 +293,7 @@ export default function DMPage() {
   return (
     <div style={{ display: "flex", height: "100dvh", background: "var(--bg)", overflow: "hidden" }}>
       <Sidebar workspaces={workspaces} channels={channels} setChannels={setChannels}
-        currentWorkspace={curWs} onProfileOpen={() => {}} />
+        currentWorkspace={curWs} onProfileOpen={() => setShowProfile(true)} />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
 
