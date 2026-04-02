@@ -19,6 +19,9 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       window.location.href = "/login";
     }
+    if (err.response?.status === 429) {
+      console.warn("Rate limit exceeded. Please slow down.");
+    }
     return Promise.reject(err);
   }
 );
