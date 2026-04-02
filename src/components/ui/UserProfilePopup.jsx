@@ -15,22 +15,20 @@ const AVATAR_GRADIENTS = [
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace("/api", "");
 
 const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
-  const { user: currentUser, profile } = useAuth();
+  const { user: currentUser } = useAuth();
   const { onlineUsers } = useSocket();
   const navigate = useNavigate();
   const popupRef = useRef(null);
 
-  const isOwnProfile = currentUser?.id === initialUser?.id;
-
-  // Өөрийн профайл бол currentUser өгөгдлийг ашиглах
-  const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
+  const [user, setUser]                 = useState(initialUser);
   const [friendStatus, setFriendStatus] = useState(null);
   const [isBlocked, setIsBlocked]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
 
-  const isOnline    = isOwnProfile ? true : onlineUsers.includes(user?.id);
-  const statusColor = isOnline ? "#4ade80" : "#6b7280";
+  const isOwnProfile = currentUser?.id === initialUser?.id;
+  const isOnline     = onlineUsers.includes(user?.id);
+  const statusColor  = isOnline ? "#4ade80" : "#6b7280";
 
   const avatarSrc  = user?.avatar
     ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
@@ -53,20 +51,20 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     return new Date(d).toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric" });
   };
 
+  // Өөрийн профайл бол popup хаа
   useEffect(() => {
+    if (isOwnProfile) { onClose(); return; }
     requestAnimationFrame(() => setVisible(true));
-    if (!isOwnProfile && initialUser?.id) {
-      api.get(`/auth/user/${initialUser.id}`).then(r => setUser(r.data.data)).catch(() => {});
-      api.get("/friends").then(res => {
-        if ((res.data.data || []).find(f => f.id === initialUser.id)) setFriendStatus("friends");
-      }).catch(() => {});
-      api.get("/friends/requests").then(res => {
-        if ((res.data.data || []).find(r => r.senderId === currentUser?.id)) setFriendStatus("pending");
-      }).catch(() => {});
-      api.get(`/blocks/check/${initialUser.id}`).then(res => {
-        setIsBlocked(res.data.data.blocked);
-      }).catch(() => {});
-    }
+    api.get(`/auth/user/${initialUser?.id}`).then(r => setUser(r.data.data)).catch(() => {});
+    api.get("/friends").then(res => {
+      if ((res.data.data || []).find(f => f.id === initialUser?.id)) setFriendStatus("friends");
+    }).catch(() => {});
+    api.get("/friends/requests").then(res => {
+      if ((res.data.data || []).find(r => r.senderId === currentUser?.id)) setFriendStatus("pending");
+    }).catch(() => {});
+    api.get(`/blocks/check/${initialUser?.id}`).then(res => {
+      setIsBlocked(res.data.data.blocked);
+    }).catch(() => {});
   }, [initialUser?.id]);
 
   useEffect(() => {
@@ -89,6 +87,8 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
     catch (err) { console.error(err); } finally { setLoading(false); }
   };
 
+  if (isOwnProfile) return null;
+
   const POPUP_W = 260;
   const POPUP_H = 320;
   const top  = Math.max(60, Math.min((position?.y || 200) - 30, window.innerHeight - POPUP_H - 20));
@@ -97,12 +97,12 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const Btn = ({ onClick, children, style = {} }) => (
     <button onClick={onClick} style={{
       width: "100%", padding: "9px 12px", borderRadius: 12, border: "none",
-      fontSize: 12, fontWeight: 600, cursor: onClick ? "pointer" : "default",
+      fontSize: 12, fontWeight: 600, cursor: "pointer",
       transition: "opacity .15s",
       display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
       ...style,
     }}
-      onMouseEnter={e => { if (onClick) e.currentTarget.style.opacity = ".8"; }}
+      onMouseEnter={e => e.currentTarget.style.opacity = ".8"}
       onMouseLeave={e => e.currentTarget.style.opacity = "1"}
     >{children}</button>
   );
@@ -183,40 +183,25 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
 
         {/* Actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-          {isOwnProfile ? (
-            // Өөрийн профайл
-            <Btn
-              onClick={() => { window.dispatchEvent(new CustomEvent("open-profile")); onClose(); }}
-              style={{ background: "linear-gradient(135deg,#1B3066,#2a4080)", color: "#F0F0F5" }}
-            >
-              ✏️ Профайл засах
-            </Btn>
-          ) : (
-            // Бусад хэрэглэгч
-            <>
-              <Btn
-                onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
-                style={{ background: "linear-gradient(135deg,#a855f7,#6366f1)", color: "#fff" }}
-              >
-                💬 Мессеж илгээх
-              </Btn>
+          <Btn onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
+            style={{ background: "linear-gradient(135deg,#a855f7,#6366f1)", color: "#fff" }}>
+            💬 Мессеж илгээх
+          </Btn>
 
-              {friendStatus === "friends"
-                ? <Btn style={{ background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.25)", color: "#4ade80" }}>✅ Найзууд</Btn>
-                : friendStatus === "pending"
-                ? <Btn style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.2)", color: "#fbbf24" }}>⏳ Хүсэлт илгээсэн</Btn>
-                : <Btn onClick={handleAddFriend} style={{ background: "rgba(27,48,102,.5)", border: "1px solid #1B3066", color: "#b8bdd8" }}>👥 Найз болох</Btn>
-              }
+          {friendStatus === "friends"
+            ? <Btn style={{ background: "rgba(34,197,94,.1)", border: "1px solid rgba(34,197,94,.25)", color: "#4ade80", cursor: "default" }}>✅ Найзууд</Btn>
+            : friendStatus === "pending"
+            ? <Btn style={{ background: "rgba(251,191,36,.08)", border: "1px solid rgba(251,191,36,.2)", color: "#fbbf24", cursor: "default" }}>⏳ Хүсэлт илгээсэн</Btn>
+            : <Btn onClick={handleAddFriend} style={{ background: "rgba(27,48,102,.5)", border: "1px solid #1B3066", color: "#b8bdd8" }}>👥 Найз болох</Btn>
+          }
 
-              <Btn onClick={handleBlock} style={{
-                background: isBlocked ? "rgba(239,68,68,.12)" : "transparent",
-                border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : "rgba(107,115,153,.2)"}`,
-                color: isBlocked ? "#f87171" : "#6B7399",
-              }}>
-                {isBlocked ? "🚫 Блок болгосон" : "🚫 Блок"}
-              </Btn>
-            </>
-          )}
+          <Btn onClick={handleBlock} style={{
+            background: isBlocked ? "rgba(239,68,68,.12)" : "transparent",
+            border: `1px solid ${isBlocked ? "rgba(239,68,68,.3)" : "rgba(107,115,153,.2)"}`,
+            color: isBlocked ? "#f87171" : "#6B7399",
+          }}>
+            {isBlocked ? "🚫 Блок болгосон" : "🚫 Блок"}
+          </Btn>
         </div>
       </div>
     </div>
