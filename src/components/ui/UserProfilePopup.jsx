@@ -13,6 +13,24 @@ const AVATAR_GRADIENTS = [
   "linear-gradient(135deg,#16a34a,#4ade80)",
 ];
 
+const STATUSES = [
+  { key:"online",  label:"Online",  dot:"#22c55e", bg:"rgba(34,197,94,0.12)",  bd:"rgba(34,197,94,0.3)" },
+  { key:"away",    label:"Away",    dot:"#f59e0b", bg:"rgba(245,158,11,0.12)", bd:"rgba(245,158,11,0.3)" },
+  { key:"busy",    label:"Busy",    dot:"#ef4444", bg:"rgba(239,68,68,0.12)",  bd:"rgba(239,68,68,0.3)" },
+  { key:"offline", label:"Offline", dot:"#6B7399", bg:"rgba(107,115,153,0.1)", bd:"rgba(107,115,153,0.25)" },
+];
+
+const COVERS = [
+  { id:"navy",   v:"linear-gradient(135deg,#080B2A,#1B3066,#2a4080)" },
+  { id:"slate",  v:"linear-gradient(135deg,#1B3066,#6B7399,#b8bdd8)" },
+  { id:"violet", v:"linear-gradient(135deg,#4c1d95,#7c3aed,#a855f7)" },
+  { id:"ocean",  v:"linear-gradient(135deg,#0c4a6e,#0ea5e9,#38bdf8)" },
+  { id:"forest", v:"linear-gradient(135deg,#14532d,#16a34a,#4ade80)" },
+  { id:"fire",   v:"linear-gradient(135deg,#7c2d12,#f97316,#fbbf24)" },
+  { id:"rose",   v:"linear-gradient(135deg,#881337,#f43f5e,#fb7185)" },
+  { id:"aurora", v:"linear-gradient(135deg,#1B3066,#6B7399,#f0abfc)" },
+];
+
 const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace("/api", "");
 
 const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
@@ -25,23 +43,27 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const isDark = theme === "dark";
   const isOwnProfile = currentUser?.id === initialUser?.id;
 
-  // Өөрийн профайл бол currentUser + profile-аас авах, өөрчлөлт хийхэд автоматаар шинэчлэгдэнэ
-  const displayUser = isOwnProfile ? currentUser : initialUser;
-  const bio = isOwnProfile ? (profile?.bio || "") : "";
-
-  const [user, setUser]                 = useState(displayUser);
+  const [user, setUser]                 = useState(isOwnProfile ? currentUser : initialUser);
   const [friendStatus, setFriendStatus] = useState(null);
   const [isBlocked, setIsBlocked]       = useState(false);
   const [loading, setLoading]           = useState(false);
   const [visible, setVisible]           = useState(false);
 
-  // currentUser өөрчлөгдөхөд popup-г шинэчлэх
+  // ProfilePage-тэй адил — profile-аас status, bio, cover авах
+  const ownStatus = profile?.status || "online";
+  const stObj     = STATUSES.find(s => s.key === ownStatus) || STATUSES[0];
+  const bio       = isOwnProfile ? (profile?.bio || "") : "";
+  const coverId   = profile?.coverId || "navy";
+  const cover     = COVERS.find(c => c.id === coverId)?.v || COVERS[0].v;
+
+  // currentUser өөрчлөгдөхөд шинэчлэх
   useEffect(() => {
     if (isOwnProfile) setUser(currentUser);
   }, [currentUser, isOwnProfile]);
 
-  const isOnline    = isOwnProfile ? true : onlineUsers.includes(user?.id);
-  const statusColor = isOnline ? "#22c55e" : "#6b7280";
+  const isOnline = isOwnProfile
+    ? (ownStatus !== "offline")
+    : onlineUsers.includes(user?.id);
 
   const avatarSrc  = user?.avatar
     ? (user.avatar.startsWith("http") ? user.avatar : API_BASE + user.avatar)
@@ -49,7 +71,6 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
   const avatarGrad = AVATAR_GRADIENTS[(user?.username?.charCodeAt(0) || 0) % AVATAR_GRADIENTS.length];
 
   const P = {
-    bg:      isDark ? "#080b28"  : "#ffffff",
     card:    isDark ? "#080b28"  : "#ffffff",
     card2:   isDark ? "#0c0f32"  : "#f4f4fb",
     border:  isDark ? "#151d4a"  : "#c8c8dc",
@@ -135,10 +156,10 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
       border: `1px solid ${P.border}`,
     }}>
 
-      {/* Cover banner */}
+      {/* Cover — ProfilePage-тэй яг адил cover */}
       <div style={{
         height: 90,
-        background: "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
+        background: isOwnProfile ? cover : "linear-gradient(135deg,#080B2A,#1B3066,#2a4080)",
         backgroundImage: "radial-gradient(circle, rgba(240,240,245,0.15) 1px, transparent 1px)",
         backgroundSize: "18px 18px",
         position: "relative",
@@ -192,10 +213,12 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
                 : <span style={{ fontSize: 26, fontWeight: 900, color: "#fff" }}>{user?.username?.[0]?.toUpperCase()}</span>
               }
             </div>
+            {/* Status dot — ProfilePage-тэй адил */}
             <span style={{
               position: "absolute", bottom: 4, right: 2,
               width: 14, height: 14, borderRadius: "50%",
-              background: statusColor, border: `3px solid ${P.card}`,
+              background: isOwnProfile ? stObj.dot : (isOnline ? "#22c55e" : "#6b7280"),
+              border: `3px solid ${P.card}`,
             }} />
           </div>
         </div>
@@ -204,18 +227,29 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
       {/* Body */}
       <div style={{ padding: "44px 18px 18px" }}>
 
-        {/* Name & status */}
+        {/* Name & status — ProfilePage-тэй адил */}
         <div style={{ marginBottom: 14 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
             <span style={{ fontSize: 17, fontWeight: 800, color: P.text }}>{user?.username}</span>
-            <span style={{
-              padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
-              background: isOnline ? "rgba(34,197,94,.12)" : "rgba(107,114,128,.12)",
-              color: isOnline ? "#4ade80" : "#9ca3af",
-              border: `1px solid ${isOnline ? "rgba(34,197,94,.3)" : "rgba(107,114,128,.2)"}`,
-            }}>
-              {isOnline ? "● Online" : `⚫ ${formatLastSeen(user?.lastSeen)}`}
-            </span>
+            {isOwnProfile ? (
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 5,
+                fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20,
+                background: stObj.bg, border: `1px solid ${stObj.bd}`, color: stObj.dot,
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: stObj.dot }} />
+                {stObj.label}
+              </span>
+            ) : (
+              <span style={{
+                padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: isOnline ? "rgba(34,197,94,.12)" : "rgba(107,114,128,.12)",
+                color: isOnline ? "#4ade80" : "#9ca3af",
+                border: `1px solid ${isOnline ? "rgba(34,197,94,.3)" : "rgba(107,114,128,.2)"}`,
+              }}>
+                {isOnline ? "● Online" : `⚫ ${formatLastSeen(user?.lastSeen)}`}
+              </span>
+            )}
           </div>
           {bio && (
             <p style={{ fontSize: 12, color: P.text2, marginTop: 4, lineHeight: 1.6 }}>{bio}</p>
@@ -236,12 +270,18 @@ const UserProfilePopup = ({ user: initialUser, position, onClose }) => {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions — бусад хэрэглэгч */}
         {!isOwnProfile && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {/* Мессеж товч — ногоон өнгөтэй */}
             <button
               onClick={() => { navigate(`/dm/${user.id}`); onClose(); }}
-              style={{ width: "100%", padding: "10px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#a855f7,#6366f1)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", transition: "opacity .15s" }}
+              style={{
+                width: "100%", padding: "10px", borderRadius: 12, border: "none",
+                background: "linear-gradient(135deg,#16a34a,#4ade80)",
+                color: "#fff", fontSize: 13, fontWeight: 700,
+                cursor: "pointer", transition: "opacity .15s",
+              }}
               onMouseEnter={e => e.currentTarget.style.opacity = ".85"}
               onMouseLeave={e => e.currentTarget.style.opacity = "1"}
             >
